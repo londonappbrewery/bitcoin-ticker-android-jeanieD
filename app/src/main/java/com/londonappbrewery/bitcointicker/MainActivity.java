@@ -1,5 +1,6 @@
 package com.londonappbrewery.bitcointicker;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -12,19 +13,28 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Toast;
 
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
 import org.json.JSONException;
 import org.json.JSONObject;
-
+import org.w3c.dom.Text;
 
 
 public class MainActivity extends AppCompatActivity {
 
     // Constants:
     // TODO: Create the base URL
-    private final String BASE_URL = "https://apiv2.bitcoin ...";
+    private final String BASE_URL = "https://apiv2.bitcoinaverage.com/indices/global/ticker/BTC";
 
     // Member Variables:
     TextView mPriceTextView;
+    TextView mPercentChange;
+    String mURL;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mPriceTextView = (TextView) findViewById(R.id.priceLabel);
+        mPercentChange = (TextView) findViewById(R.id.dailyChange);
         Spinner spinner = (Spinner) findViewById(R.id.currency_spinner);
 
         // Create an ArrayAdapter using the String array and a spinner layout
@@ -44,36 +55,68 @@ public class MainActivity extends AppCompatActivity {
         // Apply the adapter to the spinner
         spinner.setAdapter(adapter);
 
+
         // TODO: Set an OnItemSelected listener on the spinner
+        spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                Log.d("Am I Rich", "item selected " + parent.getItemAtPosition(position));
+                mURL = BASE_URL + parent.getItemAtPosition(position);
+                Log.d("Am I Rich", mURL);
+                networkRequest(mURL);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                Log.d("Am I Rich", "nothing selected");
+            }
+        });
+
+
+
+
 
     }
 
-    // TODO: complete the letsDoSomeNetworking() method
-    private void letsDoSomeNetworking(String url) {
+    // TODO: complete the networkRequest() method
+    //here's where we call Volley to process async HTTP requests
 
-//        AsyncHttpClient client = new AsyncHttpClient();
-//        client.get(WEATHER_URL, params, new JsonHttpResponseHandler() {
-//
-//            @Override
-//            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-//                // called when response HTTP status is "200 OK"
-//                Log.d("Clima", "JSON: " + response.toString());
-//                WeatherDataModel weatherData = WeatherDataModel.fromJson(response);
-//                updateUI(weatherData);
-//            }
-//
-//            @Override
-//            public void onFailure(int statusCode, Header[] headers, Throwable e, JSONObject response) {
-//                // called when response HTTP status is "4XX" (eg. 401, 403, 404)
-//                Log.d("Clima", "Request fail! Status code: " + statusCode);
-//                Log.d("Clima", "Fail response: " + response);
-//                Log.e("ERROR", e.toString());
-//                Toast.makeText(WeatherController.this, "Request Failed", Toast.LENGTH_SHORT).show();
-//            }
-//        });
+    public void networkRequest(String url) {
+        //Instantiate the Volley RequestQueue
+        RequestQueue myQueue = Volley.newRequestQueue(this);
+
+
+        //request a json response from the provided URL
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                //code to do something with the JSON response
+                Log.d("Am I Rich", "no error received, received JSON" + response.toString());
+                //pass the JSON response to the CurrencyModel
+                CurrencyModel CurrencyData = CurrencyModel.fromJson(response);
+                mPriceTextView.setText(String.valueOf(CurrencyData.getLastPrice()));
+                mPercentChange.setText(String.valueOf(CurrencyData.getPercentChange()) + '%');
+
+            }
+
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                //code to do something with the error
+                Log.d("Am I Rich", "received error, code is: " + error);
+                Toast.makeText(MainActivity.this, "Request failed", Toast.LENGTH_SHORT).show();
+
+            }
+        });
+
+        myQueue.add(jsonObjectRequest);
+
 
 
     }
+
+
+
 
 
 }
